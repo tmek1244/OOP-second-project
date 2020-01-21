@@ -16,9 +16,9 @@ class GameBoard {
         }
     }
 
-    boolean isEmpty(Coordinates coords)
+    boolean isFull(Coordinates coords)
     {
-        return this.getFieldAt(coords) == FieldElement.NOTHING;
+        return this.getFieldAt(coords) != FieldElement.NOTHING;
     }
 
     void setField(Coordinates coords, FieldElement to)

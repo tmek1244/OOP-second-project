@@ -3,6 +3,7 @@ package agh.cs.project2.backend;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Objects;
+import java.util.Random;
 
 public class Game {
     private Coordinates upperRightCorner;
@@ -10,7 +11,12 @@ public class Game {
     private ArrayList<Coordinates> walls;
     private GameBoard gameBoard;
     private Coordinates appleCoords;
+    private Coordinates goldenAppleCoords;
     private boolean isApple = false;
+    private boolean isGoldenApple = false;
+    private int ghost = 10;
+    private int timerForGoldenApple = new Random().nextInt(50) + 50;
+    private int timeToExpire;
 
     private int howManyNormalApple = 0;
 
@@ -19,29 +25,19 @@ public class Game {
         this.upperRightCorner = new Coordinates(width, height);
         this.gameBoard = new GameBoard(width, height);
         this.walls = new ArrayList<>();
-        this.snake = new Snake(this.gameBoard, this);
-        for(int i = 0; i < 10; i++) {
-            Coordinates coords = new Coordinates(width / 2 + i, height / 2);
-            this.gameBoard.setField(coords, FieldElement.SNAKE);
-            this.snake.addToSnake(coords);
-        }
+        this.snake = new Snake(this.gameBoard);
 
-        for(int i = 0; i < 15; i++)
-        {
-            Coordinates newWall = Coordinates.randomCoords(upperRightCorner);
-            if(this.gameBoard.isEmpty(newWall))
-            {
-                this.gameBoard.setField(newWall, FieldElement.WALL);
-                this.walls.add(newWall);
-            }
-        }
+        this.spawnSnake();
+        this.generateMap();
     }
 
     public boolean makeMove()
     {
-        Coordinates nextPosition = this.snake.getHead().add(Objects.requireNonNull(this.snake.getDirection().directionToCoords()));
-        nextPosition = nextPosition.modulo(this.upperRightCorner);
-        if(cantMoveTo(nextPosition))
+        Coordinates nextPosition = this.snake.getHead().add(Objects.requireNonNull(this.snake.getDirection().directionToCoords())).modulo(this.upperRightCorner);
+
+        if(ghost > 0)
+            ghost--;
+        else if(cannotMoveTo(nextPosition))
             return false;
 
         if(this.gameBoard.getFieldAt(nextPosition) == FieldElement.APPLE) {
@@ -50,13 +46,14 @@ public class Game {
             this.snake.eatApple();
         }
 
+        if(this.isGoldenApple && this.gameBoard.getFieldAt(nextPosition) == FieldElement.GOLDEN_APPLE)
+        {
+            this.isGoldenApple = false;
+            this.snake.eatApple(10);
+        }
+
         this.snake.move(nextPosition);
         return true;
-    }
-
-    public FieldElement getFieldAt(Coordinates coords)
-    {
-        return this.gameBoard.getFieldAt(coords);
     }
 
     public void changeDirection(SnakeDirection newDirection)
@@ -72,9 +69,42 @@ public class Game {
         Coordinates positionForApple;
         do {
             positionForApple = Coordinates.randomCoords(this.upperRightCorner);
-        } while(!this.gameBoard.isEmpty(positionForApple));
+        } while(this.gameBoard.isFull(positionForApple));
         this.gameBoard.setField(positionForApple, FieldElement.APPLE);
         this.appleCoords = positionForApple;
+    }
+
+    public void spawnGoldenApple()
+    {
+        if(this.isGoldenApple)
+        {
+            if(this.timeToExpire > 0)
+                this.timeToExpire--;
+            else
+            {
+                this.isGoldenApple = false;
+                this.gameBoard.setField(this.goldenAppleCoords, FieldElement.NOTHING);
+                return;
+            }
+            if(this.timerForGoldenApple == 0) this.timerForGoldenApple = new Random().nextInt(50) + 50;
+            return;
+        }
+
+        if(this.timerForGoldenApple == 0)
+        {
+            this.isGoldenApple = true;
+            Coordinates positionForApple;
+            do {
+                positionForApple = Coordinates.randomCoords(this.upperRightCorner);
+            } while(this.gameBoard.isFull(positionForApple));
+            this.gameBoard.setField(positionForApple, FieldElement.GOLDEN_APPLE);
+            this.goldenAppleCoords = positionForApple;
+            this.timeToExpire = 100;
+        }
+        else
+        {
+            this.timerForGoldenApple--;
+        }
     }
 
     public LinkedList<Coordinates> getSnake() {
@@ -89,18 +119,51 @@ public class Game {
         return this.isApple ? this.appleCoords : null;
     }
 
+    public Coordinates getGoldenAppleCoords()
+    {
+        return this.isGoldenApple ? this.goldenAppleCoords : null;
+    }
+
     public ArrayList<Coordinates> getWalls() {
         return walls;
     }
 
-    public void addToWalls(Coordinates coords)
+    public int getHowManyNormalApple()
     {
-        this.walls.add(coords);
+        return this.howManyNormalApple;
     }
 
-    private boolean cantMoveTo(Coordinates nextPosition)
+    private boolean cannotMoveTo(Coordinates nextPosition)
     {
         return this.gameBoard.getFieldAt(nextPosition) == FieldElement.SNAKE
                 || this.gameBoard.getFieldAt(nextPosition) == FieldElement.WALL;
+    }
+
+    private void spawnSnake()
+    {
+        for(int i = 0; i < 10; i++) {
+            Coordinates coords = new Coordinates(this.upperRightCorner.x / 2 + i, this.upperRightCorner.y / 2);
+            this.gameBoard.setField(coords, FieldElement.SNAKE);
+            this.snake.addToSnake(coords);
+        }
+    }
+
+    private void generateMap()
+    {
+        double offsetX = new Random().nextDouble();
+        double offsetY = new Random().nextDouble();
+
+        for(int i = 0; i < this.upperRightCorner.x; i++)
+        {
+            for(int j = 0; j < this.upperRightCorner.y; j++)
+            {
+                if((SimplexNoise.noise((0.06*i + offsetX), (0.05*j + offsetY )) + 1) / 2 > 0.75)
+                {
+                    Coordinates newWall = new Coordinates(i, j);
+                    this.gameBoard.setField(newWall, FieldElement.WALL);
+                    this.walls.add(newWall);
+                }
+            }
+        }
     }
 }

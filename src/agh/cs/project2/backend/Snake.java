@@ -7,11 +7,9 @@ public class Snake {
     private LinkedList<Coordinates> snakeBody;
     private Integer howManyToAdd = 0;
     private GameBoard board;
-    private Game game;
 
-    public Snake(GameBoard board, Game game)
+    public Snake(GameBoard board)
     {
-        this.game = game;
         this.board = board;
         this.direction = SnakeDirection.RIGHT;
         this.snakeBody = new LinkedList<>();
@@ -35,8 +33,7 @@ public class Snake {
     {
         this.snakeBody.addFirst(nextPosition);
         if(this.howManyToAdd == 0) {
-            this.board.setField(this.snakeBody.getLast(), FieldElement.WALL);
-//            this.game.addToWalls(this.snakeBody.getLast());
+            this.board.setField(this.snakeBody.getLast(), FieldElement.NOTHING);
             this.snakeBody.removeLast();
         }
         else
@@ -46,7 +43,12 @@ public class Snake {
 
     public void eatApple()
     {
-        this.howManyToAdd += 1;
+        this.howManyToAdd += 3;
+    }
+
+    public void eatApple(int value)
+    {
+        this.howManyToAdd += value;
     }
 
     public void changeDirection(SnakeDirection newDirection)

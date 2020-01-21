@@ -9,6 +9,7 @@ import java.awt.event.KeyEvent;
 class KeyboardHandling extends KeyAdapter{
     private Game game;
     private Visualization parent;
+    private boolean shiftPressed = false;
 
     KeyboardHandling(Game game, Visualization parent)
     {
@@ -32,6 +33,21 @@ class KeyboardHandling extends KeyAdapter{
         }
         else if(key == KeyEvent.VK_DOWN) {
             this.game.changeDirection(SnakeDirection.DOWN);
+        }
+        if(key == KeyEvent.VK_SHIFT && !this.shiftPressed)
+        {
+            this.parent.changeDelay(Math.max(100 - this.game.getSnake().size()/10, 50));
+            this.shiftPressed = true;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        int key = e.getKeyCode();
+        if(key == KeyEvent.VK_SHIFT && this.shiftPressed)
+        {
+            this.parent.changeDelay(Math.max(200 - this.game.getSnake().size()/20, 100));
+            this.shiftPressed = false;
         }
     }
 }

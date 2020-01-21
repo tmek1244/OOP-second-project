@@ -15,15 +15,17 @@ public class Visualization extends JPanel implements ActionListener {
 
     private Image snake;
     private Image apple;
+    private Image goldenApple;
     private Image wall;
     private int mapSizeX;
     private int mapSizeY;
     private Game map;
     private ArrayList<Image> snakeHead;
     private KeyListener currentKeyListener = null;
+    private int previousResult = 10;
 
     Timer timer;
-    boolean hasGameBegun;
+    Boolean hasGameBegun;
 
     private final int PERIOD_INTERVAL = SettingsLoader.periodInterval;
 
@@ -44,14 +46,19 @@ public class Visualization extends JPanel implements ActionListener {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-
-        drawMap(g);
+        if(!this.hasGameBegun && previousResult != 10) {
+            drawMap(g);
+            drawFinalMessage(g);
+        }
+        else
+            drawGame(g);
     }
 
     void runGame()
     {
         if(this.hasGameBegun) {
             this.hasGameBegun = false;
+            previousResult = this.map.getSnake().size();
             this.map = new Game(this.mapSizeX, this.mapSizeY);
             this.prepareBoard();
             repaint();
@@ -68,9 +75,8 @@ public class Visualization extends JPanel implements ActionListener {
         setFocusable(true);
         setPreferredSize(new Dimension(this.mapSizeX * this.scale, this.mapSizeY * this.scale));
         this.prepareBoard();
-        loadImage();
+        loadImages();
         timer = new Timer(PERIOD_INTERVAL, this);
-//        timer.start();
     }
 
     private void prepareBoard()
@@ -81,50 +87,75 @@ public class Visualization extends JPanel implements ActionListener {
         addKeyListener(this.currentKeyListener);
     }
 
+    private void drawGame(Graphics g)
+    {
+        this.drawMap(g);
+        this.drawSnakeLength(g);
+    }
+
     private void drawMap(Graphics g)
     {
         for(Coordinates coords: this.map.getWalls())
             this.drawOneImage(g, this.wall, coords);
-        if(this.map.getAppleCoords() != null)
-            this.drawOneImage(g, this.apple, this.map.getAppleCoords());
+
+        this.drawOneImage(g, this.goldenApple, this.map.getGoldenAppleCoords());
+        this.drawOneImage(g, this.apple, this.map.getAppleCoords());
+
         int i = 0;
         for(Coordinates coords: this.map.getSnake())
         {
-            if(i == 0)
-            {
+            if((i++) == 0)
                 this.drawOneImage(g, this.snakeHead.get(this.map.getDirection().ordinal()), coords);
-                i = 1;
-            }
             else
                 this.drawOneImage(g, this.snake, coords);
         }
+        //Toolkit.getDefaultToolkit().sync();
+    }
 
-        Toolkit.getDefaultToolkit().sync();
+    private void drawSnakeLength(Graphics g)
+    {
+        g.setFont(new Font("Comic Sans MS", Font.PLAIN, 20));
+
+        g.setColor(Color.red);
+        g.drawString("Snake length: " + this.map.getSnake().size(), 0, 30);
+    }
+
+    private void drawFinalMessage(Graphics g)
+    {
+        g.setFont(new Font("Comic Sans MS", Font.PLAIN, 20));
+
+        g.setColor(Color.GREEN);
+        g.drawString("Congratulation! You had scored : " + this.previousResult,
+                this.mapSizeX * this.scale / 2 - 200, this.mapSizeY * this.scale / 2);
     }
 
     private void drawOneImage(Graphics g, Image image, Coordinates coordsForImage)
     {
-        g.drawImage(image, this.scale * coordsForImage.x, this.scale * coordsForImage.y, this);
+        if(coordsForImage != null)
+            g.drawImage(image, this.scale * coordsForImage.x, this.scale * coordsForImage.y, this);
     }
 
-    private void loadImage() {
-        ImageIcon ii = new ImageIcon("src/images/snake.png");
-        this.snake = ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT);
+    private void loadImages()
+    {
+        this.snake = this.getSingleImage("src/images/snake.png");
 
-        ii = new ImageIcon("src/images/snakeTOP.png");
-        this.snakeHead.add(ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT));
-        ii = new ImageIcon("src/images/snakeRIGHT.png");
-        this.snakeHead.add(ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT));
-        ii = new ImageIcon("src/images/snakeDOWN.png");
-        this.snakeHead.add(ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT));
-        ii = new ImageIcon("src/images/snakeLEFT.png");
-        this.snakeHead.add(ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT));
+        this.snakeHead.add(this.getSingleImage("src/images/snakeTOP.png"));
+        this.snakeHead.add(this.getSingleImage("src/images/snakeRIGHT.png"));
+        this.snakeHead.add(this.getSingleImage("src/images/snakeDOWN.png"));
+        this.snakeHead.add(this.getSingleImage("src/images/snakeLEFT.png"));
 
-        ii = new ImageIcon("src/images/apple.png");
-        this.apple = ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT);
-        ii = new ImageIcon("src/images/wall.png");
-        this.wall = ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT);
+        this.apple = this.getSingleImage("src/images/apple.png");
+        this.goldenApple = this.getSingleImage("src/images/goldenApple.png");
+
+        this.wall = this.getSingleImage("src/images/wall.png");
     }
+
+    private Image getSingleImage(String filename)
+    {
+        ImageIcon ii = new ImageIcon(filename);
+        return ii.getImage().getScaledInstance(this.scale, this.scale, Image.SCALE_DEFAULT);
+    }
+
 
     @Override
     public void actionPerformed(ActionEvent e)
@@ -134,7 +165,15 @@ public class Visualization extends JPanel implements ActionListener {
                 this.timer.stop();
             }
             this.map.spawnApple();
+            this.map.spawnGoldenApple();
             repaint();
         }
+    }
+
+    void changeDelay(int delay)
+    {
+        this.timer.stop();
+        this.timer.setDelay(delay);
+        this.timer.start();
     }
 }
